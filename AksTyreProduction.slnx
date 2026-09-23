@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AksTyreProduction.Web/AksTyreProduction.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AksTyreProduction.Tests/AksTyreProduction.Tests.csproj" />
+  </Folder>
+</Solution>

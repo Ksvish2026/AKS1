@@ -1,0 +1,23 @@
+using AksTyreProduction.Web.Data;
+using AksTyreProduction.Web.Models;
+using AksTyreProduction.Web.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+
+namespace AksTyreProduction.Web.Controllers;
+public class StationsController(AppDbContext db,ProductionService service) : Controller
+{
+    public async Task<IActionResult> Index(string station="Buffing",string? tyreCode=null)
+    {
+        var vm=new StationVm { Station=station,TyreCode=tyreCode,Operators=await db.Operators.Where(x=>x.Active).ToListAsync(),Machines=await db.Machines.Where(x=>x.Active).ToListAsync() };
+        if(!string.IsNullOrWhiteSpace(tyreCode)){var tyre=await db.Tyres.Include(x=>x.Customer).Include(x=>x.RetreadJobs).ThenInclude(x=>x.StationTransactions).SingleOrDefaultAsync(x=>x.AksTyreId==tyreCode);vm.Job=tyre?.RetreadJobs.OrderByDescending(x=>x.RetreadNumber).FirstOrDefault();vm.Active=vm.Job?.StationTransactions.FirstOrDefault(x=>x.EndedAt==null);if(tyre==null)TempData["Error"]="Tyre not found.";}
+        return View(vm);
+    }
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Start(int jobId,string station,int operatorId,int? machineId,string tyreCode){try{await service.StartStationAsync(jobId,station,operatorId,machineId);TempData["Success"]=$"{station} started.";}catch(Exception ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index),new{station,tyreCode});}
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Complete(int transactionId,int durationMinutes,TransactionResult result,string? notes,string? failureReason,string station,string tyreCode)
+    {try{if(result==TransactionResult.Fail&&string.IsNullOrWhiteSpace(failureReason))throw new InvalidOperationException("A failure reason is required.");var details=Request.Form.Where(x=>x.Key.StartsWith("detail_")).ToDictionary(x=>x.Key[7..].Replace('_',' '),x=>x.Value.ToString());await service.CompleteStationAsync(transactionId,durationMinutes,result,notes??"",failureReason,JsonSerializer.Serialize(details));TempData["Success"]="Transaction completed and historical event saved.";}catch(Exception ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index),new{station,tyreCode});}
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> ReleaseQc(int jobId,int operatorId,string tyreCode){try{await service.ReleaseQcAsync(jobId,operatorId);TempData["Success"]="QC passed. Tyre is ready for dispatch.";}catch(Exception ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index),new{station="QC Release",tyreCode});}
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> MarkReady(int jobId,string tyreCode){try{await service.MarkReadyForDispatchAsync(jobId);TempData["Success"]="Tyre released and ready for dispatch.";}catch(Exception ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index),new{station="QC Release",tyreCode});}
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Dispatch(int jobId,string reference,string method,string? notes,string tyreCode){try{await service.DispatchAsync(jobId,reference,method,notes??"");TempData["Success"]="Tyre dispatched and retread completed.";}catch(Exception ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index),new{station="Dispatch",tyreCode});}
+}

@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.edge-preview*/
+login-preview*.png
+.env
+.env.*
+*.user
+*.suo
+aks-tyres.db
+aks-tyres.db-shm
+aks-tyres.db-wal
+src/AksTyreProduction.Web/wwwroot/uploads/*
+src/AksTyreProduction.Web/data-protection-keys/*
+!src/AksTyreProduction.Web/wwwroot/uploads/.gitkeep
