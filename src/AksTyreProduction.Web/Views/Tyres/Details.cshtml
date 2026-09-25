@@ -1,16 +1,294 @@
 @model Tyre
 @inject AksTyreProduction.Web.Data.AppDbContext Db
-@{ViewData["Title"]=$"Passport {Model.AksTyreId}";var current=Model.RetreadJobs.OrderByDescending(x=>x.RetreadNumber).First();var materials=Db.Materials.Include(x=>x.Batches).Where(x=>x.Active).ToList();string R(decimal v)=>v.ToString("C2",CultureInfo.GetCultureInfo("en-ZA"));}
-<div class="passport-head"><div class="d-flex justify-content-between flex-wrap"><div><div class="text-warning small fw-bold">DIGITAL TYRE PASSPORT</div><h1>@Model.AksTyreId</h1><div>@Model.Brand @Model.Size · Serial: @Model.SerialNumber</div><a class="btn btn-sm btn-warning mt-3" asp-action="Tag" asp-route-id="@Model.Id" target="_blank">Barcode Tag / Print</a></div><div class="text-end"><span class="status-pill @(current.Status==JobStatus.Rejected?"rejected":"")">@current.Status</span><div class="mt-2">Retread #@current.RetreadNumber · @current.CurrentStage</div>@if(current.EstimatedCompletion.HasValue){<small>Estimated completion @current.EstimatedCompletion.Value.ToString("dd MMM yyyy HH:mm")</small>}</div></div></div>
+@{
+    ViewData["Title"] = $"Passport {Model.AksTyreId}";
+    var current = Model.RetreadJobs.OrderByDescending(x => x.RetreadNumber).First();
+    var materials = Db.Materials.Include(x => x.Batches).Where(x => x.Active).ToList();
+    string R(decimal v) => v.ToString("C2", CultureInfo.GetCultureInfo("en-ZA"));
+}
+
+<div class="passport-head">
+    <div class="d-flex justify-content-between flex-wrap gap-3 align-items-center">
+        <div>
+            <div class="eyebrow light">DIGITAL TYRE PASSPORT</div>
+            <h1>@Model.AksTyreId</h1>
+            <div class="passport-subtitle">@Model.Brand @Model.Size · Serial: @Model.SerialNumber</div>
+            <a class="btn btn-warning mt-3" asp-action="Tag" asp-route-id="@Model.Id" target="_blank">Barcode Tag / Print</a>
+        </div>
+        <div class="text-end">
+            <span class="status-pill @(current.Status == JobStatus.Rejected ? "status-danger" : "status-active")">@current.Status</span>
+            <div class="mt-2 passport-meta">Retread #@current.RetreadNumber · @current.CurrentStage</div>
+            @if (current.EstimatedCompletion.HasValue)
+            {
+                <small>Estimated completion @current.EstimatedCompletion.Value.ToString("dd MMM yyyy HH:mm")</small>
+            }
+        </div>
+    </div>
+</div>
+
 <div class="grid-3 mb-4">
-<div class="card"><div class="card-header">Tyre Details</div><div class="card-body"><small class="muted">BRAND & SIZE</small><p>@Model.Brand @Model.Size</p><small class="muted">TREAD / APPLICATION</small><p>@Model.OriginalTreadPattern · @Model.Application</p><small class="muted">CASING</small><p class="mb-0">@Model.CasingCondition</p></div></div>
-<div class="card"><div class="card-header">Customer Details</div><div class="card-body"><strong>@Model.Customer.Name</strong><p>@Model.Customer.AccountNumber<br/>@Model.Customer.Site<br/>@Model.Customer.Address</p></div></div>
-<div class="card"><div class="card-header">Current Retread</div><div class="card-body"><strong>@current.JobNumber</strong><p>Received @current.ReceivedAt.ToString("dd MMM yyyy HH:mm")</p><div class="station-steps">@foreach(var stage in Workflow.Stages){var done=current.StationTransactions.Any(x=>x.Station==stage&&x.EndedAt!=null);<span class="station-step @(done?"done":stage==current.CurrentStage?"current":"")">@stage</span>}</div><a class="btn btn-sm btn-primary mt-3" asp-controller="Stations" asp-action="Index" asp-route-station="@current.CurrentStage" asp-route-tyreCode="@Model.AksTyreId">Open Factory Station</a></div></div></div>
-<div class="grid-2 mb-4"><section class="card"><div class="card-header">Production Timeline · Retread #@current.RetreadNumber</div><div class="card-body"><div class="timeline">
-@foreach(var tx in current.StationTransactions.OrderByDescending(x=>x.StartedAt)){var details=JsonSerializer.Deserialize<Dictionary<string,string>>(tx.DetailsJson??"{}")??[];<div class="timeline-item @(tx.Result==TransactionResult.Fail?"failed":"")"><div class="d-flex justify-content-between"><strong>@tx.Station · @tx.Result</strong><small>@tx.StartedAt.ToString("dd MMM HH:mm")</small></div><div class="muted">@tx.Operator.Name · @tx.DurationMinutes min · Labour @R(tx.LabourCost)</div><div>@tx.Notes @tx.FailureReason</div>@if(details.Any()){<div class="small mt-1">@foreach(var d in details.Where(x=>!string.IsNullOrWhiteSpace(x.Value))){<span class="badge text-bg-light me-1">@d.Key: @d.Value</span>}</div>}</div>}@if(!current.StationTransactions.Any()){<p>No production events yet.</p>}
-</div></div></section><section class="card"><div class="card-header">Actual Cost & Invoice</div><div class="card-body"><div class="d-flex justify-content-between"><span>Base cost</span><span>@R(current.BaseCost)</span></div>@foreach(var group in current.MaterialUsages.GroupBy(x=>x.Material.Name)){<div class="d-flex justify-content-between"><span>@group.Key</span><span>@R(group.Sum(x=>x.TotalCost))</span></div>}<div class="d-flex justify-content-between"><span>Labour</span><span>@R(current.LabourCost)</span></div><hr/><div class="d-flex justify-content-between fs-5"><strong>Production Cost</strong><strong>@R(current.TotalCost)</strong></div><div class="d-flex justify-content-between"><span>Markup (@current.MarkupPercent%)</span><strong>@R(current.SellingPrice-current.TotalCost)</strong></div><div class="d-flex justify-content-between text-primary fs-5"><strong>Selling Price</strong><strong>@R(current.SellingPrice)</strong></div>@if(current.Invoice!=null){<div class="alert alert-success mt-3 mb-0">Draft invoice <strong>@current.Invoice.InvoiceNumber</strong> · @R(current.Invoice.SellingPriceSnapshot)</div>}else if(current.Status is JobStatus.QcPassed or JobStatus.ReadyForDispatch or JobStatus.Dispatched){<form asp-controller="Invoices" asp-action="Create" method="post" class="mt-3"><input type="hidden" name="jobId" value="@current.Id"/><input type="hidden" name="tyreId" value="@Model.Id"/><div class="input-group"><input class="form-control" name="invoiceNumber" required placeholder="INV-26001"/><button class="btn btn-outline-primary">Create Draft Invoice</button></div></form>}</div></section></div>
-<div class="grid-2 mb-4"><section class="card"><div class="card-header">Materials & Batch Traceability</div><div class="card-body"><table class="table table-sm"><thead><tr><th>Material</th><th>Batch</th><th>Qty</th><th>Captured Cost</th></tr></thead><tbody>@foreach(var u in current.MaterialUsages){<tr><td>@u.Material.Name</td><td>@(u.MaterialBatch?.LotNumber??"—")</td><td>@u.Quantity @u.Material.UnitOfMeasure</td><td>@R(u.TotalCost)</td></tr>}</tbody></table><form asp-controller="Materials" asp-action="Use" method="post" class="row g-2"><input type="hidden" name="jobId" value="@current.Id"/><input type="hidden" name="tyreId" value="@Model.Id"/><div class="col-5"><select class="form-select" name="materialId"><option value="">Material...</option>@foreach(var m in materials){<option value="@m.Id">@m.Name · @R(m.CurrentUnitCost)/@m.UnitOfMeasure</option>}</select></div><div class="col-3"><input class="form-control" type="number" step="0.01" name="quantity" placeholder="Quantity"/></div><div class="col-4"><select class="form-select" name="batchId"><option value="">No batch</option>@foreach(var b in materials.SelectMany(x=>x.Batches)){<option value="@b.Id">@b.LotNumber (@b.Material.Name)</option>}</select></div><div class="col-12"><button class="btn btn-outline-primary w-100">Add Actual Material Usage</button></div></form></div></section>
-<section class="card"><div class="card-header">Photos / Attachments</div><div class="card-body"><div class="d-flex flex-wrap gap-2">@foreach(var p in Model.RetreadJobs.SelectMany(x=>x.Photos)){<a href="~/uploads/@p.FileName" target="_blank"><img src="~/uploads/@p.FileName" style="width:90px;height:70px;object-fit:cover"/></a>}</div><form asp-action="Upload" method="post" enctype="multipart/form-data" class="mt-3"><input type="hidden" name="id" value="@Model.Id"/><input type="hidden" name="jobId" value="@current.Id"/><label class="form-label">Associate with production event</label><select name="stationTransactionId" class="form-select mb-2"><option value="">General tyre photo</option>@foreach(var tx in current.StationTransactions.OrderByDescending(x=>x.StartedAt)){<option value="@tx.Id">@tx.Station · @tx.StartedAt.ToString("dd MMM HH:mm") · @tx.Result</option>}</select><label class="form-label">Inspection, defect, repair or production photo</label><input class="form-control mb-2" type="file" accept="image/*" name="photo"/><button class="btn btn-outline-secondary">Upload Photo</button></form></div></section></div>
-<section class="card mb-4"><div class="card-header">Repairs Performed</div><div class="card-body"><table class="table table-sm"><thead><tr><th>Type</th><th>Location</th><th>Patch</th><th>Qty</th><th>Description</th></tr></thead><tbody>@foreach(var repair in current.Repairs){<tr><td>@repair.Type</td><td>@repair.Location</td><td>@repair.PatchSize</td><td>@repair.Quantity</td><td>@repair.Description</td></tr>}</tbody></table><form asp-action="AddRepair" method="post" class="row g-2"><input type="hidden" name="id" value="@Model.Id"/><input type="hidden" name="jobId" value="@current.Id"/><div class="col-md-2"><input class="form-control" name="type" required placeholder="Repair type"/></div><div class="col-md-2"><input class="form-control" name="location" placeholder="Location"/></div><div class="col-md-2"><input class="form-control" name="patchSize" placeholder="Patch size"/></div><div class="col-md-2"><input class="form-control" name="quantity" type="number" min="1" value="1"/></div><div class="col-md-3"><input class="form-control" name="description" placeholder="Description"/></div><div class="col-md-1"><button class="btn btn-outline-primary">Add</button></div></form></div></section>
-<section class="card mb-4"><div class="card-header">Lifetime Retread History</div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Retread</th><th>Job</th><th>Received</th><th>Completed</th><th>Result</th><th>Events</th><th>Repairs</th><th>Cost</th></tr></thead><tbody>@foreach(var job in Model.RetreadJobs.OrderByDescending(x=>x.RetreadNumber)){<tr><td class="fw-bold">#@job.RetreadNumber</td><td>@job.JobNumber</td><td>@job.ReceivedAt.ToString("dd MMM yyyy")</td><td>@(job.CompletedAt?.ToString("dd MMM yyyy")??"—")</td><td>@job.Status</td><td>@job.StationTransactions.Count</td><td>@job.Repairs.Count</td><td class="money">@R(job.TotalCost)</td></tr>}</tbody></table></div></section>
-<div class="d-flex gap-2 flex-wrap">@if((current.Status is JobStatus.Dispatched or JobStatus.Rejected)&&!Model.IsScrapped){<form asp-action="NewRetread" method="post"><input type="hidden" name="id" value="@Model.Id"/><input class="form-control d-inline-block" style="width:180px" name="jobNumber" required placeholder="New job number"/><button class="btn btn-primary">Start New Retread</button></form>}@if(!Model.IsScrapped){<form asp-action="Scrap" method="post" onsubmit="return confirm('Permanently scrap this tyre?')"><input type="hidden" name="id" value="@Model.Id"/><input class="form-control d-inline-block" style="width:240px" name="reason" required placeholder="Scrap reason"/><button class="btn btn-outline-danger">Scrap Tyre</button></form>}else{<div class="alert alert-danger">Permanently scrapped: @Model.ScrapReason</div>}</div>
+    <div class="card lift-panel">
+        <div class="card-header">Tyre Details</div>
+        <div class="card-body detail-list">
+            <small class="muted">BRAND & SIZE</small>
+            <p>@Model.Brand @Model.Size</p>
+            <small class="muted">TREAD / APPLICATION</small>
+            <p>@Model.OriginalTreadPattern · @Model.Application</p>
+            <small class="muted">CASING</small>
+            <p class="mb-0">@Model.CasingCondition</p>
+        </div>
+    </div>
+
+    <div class="card lift-panel">
+        <div class="card-header">Customer Details</div>
+        <div class="card-body detail-list">
+            <strong>@Model.Customer.Name</strong>
+            <p>@Model.Customer.AccountNumber<br />@Model.Customer.Site<br />@Model.Customer.Address</p>
+        </div>
+    </div>
+
+    <div class="card lift-panel">
+        <div class="card-header">Current Retread</div>
+        <div class="card-body detail-list">
+            <strong>@current.JobNumber</strong>
+            <p>Received @current.ReceivedAt.ToString("dd MMM yyyy HH:mm")</p>
+            <div class="station-steps">
+                @foreach (var stage in Workflow.Stages)
+                {
+                    var done = current.StationTransactions.Any(x => x.Station == stage && x.EndedAt != null);
+                    <span class="station-step @(done ? "done" : stage == current.CurrentStage ? "current" : "")">@stage</span>
+                }
+            </div>
+            <a class="btn btn-sm btn-primary mt-3" asp-controller="Stations" asp-action="Index" asp-route-station="@current.CurrentStage" asp-route-tyreCode="@Model.AksTyreId">Open Factory Station</a>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2 mb-4">
+    <section class="card lift-panel">
+        <div class="card-header">Production Timeline · Retread #@current.RetreadNumber</div>
+        <div class="card-body">
+            <div class="timeline">
+                @foreach (var tx in current.StationTransactions.OrderByDescending(x => x.StartedAt))
+                {
+                    var details = JsonSerializer.Deserialize<Dictionary<string, string>>(tx.DetailsJson ?? "{}") ?? new Dictionary<string, string>();
+                    <div class="timeline-item @(tx.Result == TransactionResult.Fail ? "failed" : "")">
+                        <div class="d-flex justify-content-between">
+                            <strong>@tx.Station · @tx.Result</strong>
+                            <small>@tx.StartedAt.ToString("dd MMM HH:mm")</small>
+                        </div>
+                        <div class="muted">@tx.Operator.Name · @tx.DurationMinutes min · Labour @R(tx.LabourCost)</div>
+                        <div>@tx.Notes @tx.FailureReason</div>
+                        @if (details.Any())
+                        {
+                            <div class="small mt-1">
+                                @foreach (var d in details.Where(x => !string.IsNullOrWhiteSpace(x.Value)))
+                                {
+                                    <span class="badge text-bg-light me-1">@d.Key: @d.Value</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                @if (!current.StationTransactions.Any())
+                {
+                    <p class="mb-0">No production events yet.</p>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="card lift-panel">
+        <div class="card-header">Actual Cost & Invoice</div>
+        <div class="card-body detail-list">
+            <div class="d-flex justify-content-between"><span>Base cost</span><span>@R(current.BaseCost)</span></div>
+            @foreach (var group in current.MaterialUsages.GroupBy(x => x.Material.Name))
+            {
+                <div class="d-flex justify-content-between"><span>@group.Key</span><span>@R(group.Sum(x => x.TotalCost))</span></div>
+            }
+            <div class="d-flex justify-content-between"><span>Labour</span><span>@R(current.LabourCost)</span></div>
+            <hr />
+            <div class="d-flex justify-content-between fs-5"><strong>Production Cost</strong><strong>@R(current.TotalCost)</strong></div>
+            <div class="d-flex justify-content-between"><span>Markup (@current.MarkupPercent%)</span><strong>@R(current.SellingPrice - current.TotalCost)</strong></div>
+            <div class="d-flex justify-content-between text-primary fs-5"><strong>Selling Price</strong><strong>@R(current.SellingPrice)</strong></div>
+            @if (current.Invoice != null)
+            {
+                <div class="alert alert-success mt-3 mb-0">Draft invoice <strong>@current.Invoice.InvoiceNumber</strong> · @R(current.Invoice.SellingPriceSnapshot)</div>
+            }
+            else if (current.Status is JobStatus.QcPassed or JobStatus.ReadyForDispatch or JobStatus.Dispatched)
+            {
+                <form asp-controller="Invoices" asp-action="Create" method="post" class="mt-3">
+                    <input type="hidden" name="jobId" value="@current.Id" />
+                    <input type="hidden" name="tyreId" value="@Model.Id" />
+                    <div class="input-group">
+                        <input class="form-control" name="invoiceNumber" required placeholder="INV-26001" />
+                        <button class="btn btn-outline-primary">Create Draft Invoice</button>
+                    </div>
+                </form>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="grid-2 mb-4">
+    <section class="card lift-panel">
+        <div class="card-header">Materials & Batch Traceability</div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr><th>Material</th><th>Batch</th><th>Qty</th><th>Captured Cost</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in current.MaterialUsages)
+                    {
+                        <tr>
+                            <td>@u.Material.Name</td>
+                            <td>@(u.MaterialBatch?.LotNumber ?? "—")</td>
+                            <td>@u.Quantity @u.Material.UnitOfMeasure</td>
+                            <td>@R(u.TotalCost)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <form asp-controller="Materials" asp-action="Use" method="post" class="row g-2 mt-3">
+                <input type="hidden" name="jobId" value="@current.Id" />
+                <input type="hidden" name="tyreId" value="@Model.Id" />
+                <div class="col-5">
+                    <select class="form-select" name="materialId">
+                        <option value="">Material...</option>
+                        @foreach (var m in materials)
+                        {
+                            <option value="@m.Id">@m.Name · @R(m.CurrentUnitCost)/@m.UnitOfMeasure</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-3">
+                    <input class="form-control" type="number" step="0.01" name="quantity" placeholder="Quantity" />
+                </div>
+                <div class="col-4">
+                    <select class="form-select" name="batchId">
+                        <option value="">No batch</option>
+                        @foreach (var b in materials.SelectMany(x => x.Batches))
+                        {
+                            <option value="@b.Id">@b.LotNumber (@b.Material.Name)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-outline-primary w-100">Add Actual Material Usage</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card lift-panel">
+        <div class="card-header">Photos / Attachments</div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 photo-grid">
+                @foreach (var p in Model.RetreadJobs.SelectMany(x => x.Photos))
+                {
+                    <a href="~/uploads/@p.FileName" target="_blank"><img src="~/uploads/@p.FileName" /></a>
+                }
+            </div>
+            <form asp-action="Upload" method="post" enctype="multipart/form-data" class="mt-3">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="jobId" value="@current.Id" />
+                <label class="form-label">Associate with production event</label>
+                <select name="stationTransactionId" class="form-select mb-2">
+                    <option value="">General tyre photo</option>
+                    @foreach (var tx in current.StationTransactions.OrderByDescending(x => x.StartedAt))
+                    {
+                        <option value="@tx.Id">@tx.Station · @tx.StartedAt.ToString("dd MMM HH:mm") · @tx.Result</option>
+                    }
+                </select>
+                <label class="form-label">Inspection, defect, repair or production photo</label>
+                <input class="form-control mb-2" type="file" accept="image/*" name="photo" />
+                <button class="btn btn-outline-secondary">Upload Photo</button>
+            </form>
+        </div>
+    </section>
+</div>
+
+<section class="card lift-panel mb-4">
+    <div class="card-header">Repairs Performed</div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <thead>
+                <tr><th>Type</th><th>Location</th><th>Patch</th><th>Qty</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var repair in current.Repairs)
+                {
+                    <tr>
+                        <td>@repair.Type</td>
+                        <td>@repair.Location</td>
+                        <td>@repair.PatchSize</td>
+                        <td>@repair.Quantity</td>
+                        <td>@repair.Description</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <form asp-action="AddRepair" method="post" class="row g-2 mt-3">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="jobId" value="@current.Id" />
+            <div class="col-md-2"><input class="form-control" name="type" required placeholder="Repair type" /></div>
+            <div class="col-md-2"><input class="form-control" name="location" placeholder="Location" /></div>
+            <div class="col-md-2"><input class="form-control" name="patchSize" placeholder="Patch size" /></div>
+            <div class="col-md-2"><input class="form-control" name="quantity" type="number" min="1" value="1" /></div>
+            <div class="col-md-3"><input class="form-control" name="description" placeholder="Description" /></div>
+            <div class="col-md-1"><button class="btn btn-outline-primary">Add</button></div>
+        </form>
+    </div>
+</section>
+
+<section class="card lift-panel mb-4">
+    <div class="card-header">Lifetime Retread History</div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr><th>Retread</th><th>Job</th><th>Received</th><th>Completed</th><th>Result</th><th>Events</th><th>Repairs</th><th>Cost</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var job in Model.RetreadJobs.OrderByDescending(x => x.RetreadNumber))
+                {
+                    <tr>
+                        <td class="fw-bold">#@job.RetreadNumber</td>
+                        <td>@job.JobNumber</td>
+                        <td>@job.ReceivedAt.ToString("dd MMM yyyy")</td>
+                        <td>@(job.CompletedAt?.ToString("dd MMM yyyy") ?? "—")</td>
+                        <td>@job.Status</td>
+                        <td>@job.StationTransactions.Count</td>
+                        <td>@job.Repairs.Count</td>
+                        <td class="money">@R(job.TotalCost)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="d-flex gap-2 flex-wrap">
+    @if ((current.Status is JobStatus.Dispatched or JobStatus.Rejected) && !Model.IsScrapped)
+    {
+        <form asp-action="NewRetread" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input class="form-control d-inline-block" style="width:180px" name="jobNumber" required placeholder="New job number" />
+            <button class="btn btn-primary">Start New Retread</button>
+        </form>
+    }
+    @if (!Model.IsScrapped)
+    {
+        <form asp-action="Scrap" method="post" onsubmit="return confirm('Permanently scrap this tyre?')">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input class="form-control d-inline-block" style="width:240px" name="reason" required placeholder="Scrap reason" />
+            <button class="btn btn-outline-danger">Scrap Tyre</button>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-danger">Permanently scrapped: @Model.ScrapReason</div>
+    }
+</div>

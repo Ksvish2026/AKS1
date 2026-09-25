@@ -1,0 +1,183 @@
+@model StatisticsVm
+@{
+    ViewData["Title"] = "Production Statistics";
+    string R(decimal v) => v.ToString("C2", CultureInfo.GetCultureInfo("en-ZA"));
+    string P(double v) => v.ToString("0.##");
+}
+
+<div class="page-head">
+    <div>
+        <h1>Production Statistics</h1>
+        <p>Operational trend and quality snapshot across the retreading workflow</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Dashboard" asp-action="Index">Back to dashboard</a>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi">
+        <div class="bar"></div>
+        <small>Total Tyres</small>
+        <strong>@Model.TotalTyres</strong>
+    </div>
+    <div class="kpi">
+        <div class="bar"></div>
+        <small>Total Retreads</small>
+        <strong>@Model.TotalRetreads</strong>
+    </div>
+    <div class="kpi">
+        <div class="bar"></div>
+        <small>Active Jobs</small>
+        <strong>@Model.ActiveJobs</strong>
+    </div>
+    <div class="kpi warn">
+        <div class="bar"></div>
+        <small>Ready for Dispatch</small>
+        <strong>@Model.ReadyForDispatchJobs</strong>
+    </div>
+    <div class="kpi bad">
+        <div class="bar"></div>
+        <small>Rejected Jobs</small>
+        <strong>@Model.RejectedJobs</strong>
+    </div>
+    <div class="kpi">
+        <div class="bar"></div>
+        <small>Dispatched</small>
+        <strong>@Model.DispatchedJobs</strong>
+    </div>
+</div>
+
+@if (Model.PriorityAlerts.Any())
+{
+    <div class="alert alert-info mb-4">
+        <strong>Operational focus:</strong>
+        @foreach (var alert in Model.PriorityAlerts)
+        {
+            <div>@alert</div>
+        }
+    </div>
+}
+
+<div class="grid-2 mb-4">
+    <section class="card">
+        <div class="card-header">Quality & throughput</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Average cycle time</span>
+                <strong>@P(Model.AverageCycleHours) hrs</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>QC pass rate</span>
+                <strong>@P(Model.QcPassRate)%</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Scrap rate</span>
+                <strong>@P(Model.ScrapRate)%</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Active jobs</span>
+                <strong>@Model.ActiveJobs</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Ready for dispatch</span>
+                <strong>@Model.ReadyForDispatchJobs</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">Cost summary</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Materials</span>
+                <span class="money">@R(Model.TotalMaterialSpend)</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Labour</span>
+                <span class="money">@R(Model.TotalLabourSpend)</span>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between">
+                <strong>Total production spend</strong>
+                <strong class="money text-primary">@R(Model.TotalProductionSpend)</strong>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="grid-2 mb-4">
+    <section class="card">
+        <div class="card-header">Current stage mix</div>
+        <div class="card-body">
+            @foreach (var row in Model.StageBreakdown.OrderByDescending(x => x.Value))
+            {
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div style="width:190px">@row.Key</div>
+                    <div class="progress flex-grow-1" style="height:9px">
+                        <div class="progress-bar" style="width:@(Math.Min(100, row.Value * 18))%"></div>
+                    </div>
+                    <strong>@row.Value</strong>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">Station average time</div>
+        <div class="card-body">
+            @if (Model.StationAverageMinutes.Any())
+            {
+                @foreach (var row in Model.StationAverageMinutes.OrderBy(x => x.Key))
+                {
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>@row.Key</span>
+                        <strong>@row.Value min</strong>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="mb-0 text-muted">No complete station timings recorded yet.</p>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <div class="card-header">Operator productivity</div>
+        <div class="card-body">
+            @if (Model.OperatorProductivity.Any())
+            {
+                @foreach (var row in Model.OperatorProductivity.OrderByDescending(x => x.Value))
+                {
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span>@row.Key</span>
+                        <strong>@row.Value</strong>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="mb-0 text-muted">No operational transactions have been logged yet.</p>
+            }
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">Dispatch readiness</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Ready for dispatch</span>
+                <strong>@Model.ReadyForDispatchJobs</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Dispatched</span>
+                <strong>@Model.DispatchedJobs</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Rejected</span>
+                <strong>@Model.RejectedJobs</strong>
+            </div>
+        </div>
+    </section>
+</div>

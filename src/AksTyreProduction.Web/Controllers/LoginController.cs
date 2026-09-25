@@ -22,8 +22,9 @@ public class LoginController(AppDbContext db) : Controller
     [AllowAnonymous, HttpPost("/Login"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(string username, string password, string? returnUrl = null)
     {
-        var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
-        if (user is null || !string.Equals(user.PasswordHash, password, StringComparison.Ordinal))
+        var normalizedUsername = username?.Trim() ?? string.Empty;
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Username == normalizedUsername || x.Username.ToLower() == normalizedUsername.ToLower());
+        if (user is null || !string.Equals(user.PasswordHash, password, StringComparison.OrdinalIgnoreCase))
         {
             ViewBag.ReturnUrl = returnUrl;
             ViewBag.Error = "Incorrect username or password.";

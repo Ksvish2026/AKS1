@@ -8,15 +8,32 @@ public static class DemoSeeder
     public static async Task SeedAsync(AppDbContext db)
     {
         await db.Database.MigrateAsync();
-        if (!await db.Users.AnyAsync())
+
+        var demoUsers = new[]
         {
-            db.Users.AddRange(
-                new AppUser { Username = "admin", PasswordHash = "Admin", RolesCsv = "Administrator,Management,QC", DefaultRole = ApplicationRoles.Administrator },
-                new AppUser { Username = "manager", PasswordHash = "Manager", RolesCsv = "Management,QC", DefaultRole = ApplicationRoles.Management },
-                new AppUser { Username = "qc", PasswordHash = "QC", RolesCsv = "QC", DefaultRole = ApplicationRoles.QC }
-            );
-            await db.SaveChangesAsync();
+            new AppUser { Username = "Admin", PasswordHash = "Admin", RolesCsv = "Administrator,Management,QC", DefaultRole = ApplicationRoles.Administrator },
+            new AppUser { Username = "Manager", PasswordHash = "Manager", RolesCsv = "Management,QC", DefaultRole = ApplicationRoles.Management },
+            new AppUser { Username = "QC", PasswordHash = "QC", RolesCsv = "QC", DefaultRole = ApplicationRoles.QC }
+        };
+
+        foreach (var desired in demoUsers)
+        {
+            var existing = await db.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == desired.Username.ToLower());
+            if (existing is null)
+            {
+                db.Users.Add(desired);
+            }
+            else
+            {
+                existing.Username = desired.Username;
+                existing.PasswordHash = desired.PasswordHash;
+                existing.RolesCsv = desired.RolesCsv;
+                existing.DefaultRole = desired.DefaultRole;
+            }
         }
+
+        await db.SaveChangesAsync();
+
         if (await db.Customers.AnyAsync())
         {
             var flagshipJob=await db.RetreadJobs.Include(x=>x.Tyre).Where(x=>x.Tyre.AksTyreId=="GTC260001").OrderByDescending(x=>x.RetreadNumber).FirstOrDefaultAsync();

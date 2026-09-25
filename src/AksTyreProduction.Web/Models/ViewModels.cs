@@ -12,6 +12,26 @@ public class DashboardVm
     public List<StationTransaction> Recent { get; set; }=[]; public List<RetreadJob> Attention { get; set; }=[];
     public Dictionary<string,int> OperatorProductivity { get; set; }=[]; public Dictionary<string,double> MachineUtilisationMinutes { get; set; }=[]; public string Bottleneck { get; set; }="None";
 }
+
+public class StatisticsVm
+{
+    public int TotalTyres { get; set; }
+    public int TotalRetreads { get; set; }
+    public int ActiveJobs { get; set; }
+    public int ReadyForDispatchJobs { get; set; }
+    public int RejectedJobs { get; set; }
+    public int DispatchedJobs { get; set; }
+    public decimal TotalMaterialSpend { get; set; }
+    public decimal TotalLabourSpend { get; set; }
+    public decimal TotalProductionSpend { get; set; }
+    public double AverageCycleHours { get; set; }
+    public double QcPassRate { get; set; }
+    public double ScrapRate { get; set; }
+    public Dictionary<string, int> StageBreakdown { get; set; } = [];
+    public Dictionary<string, double> StationAverageMinutes { get; set; } = [];
+    public Dictionary<string, int> OperatorProductivity { get; set; } = [];
+    public List<string> PriorityAlerts { get; set; } = [];
+}
 public class ReceiveVm
 {
     [Required] public string Brand { get; set; }="Michelin"; [Required] public string Size { get; set; }="11R22.5";
