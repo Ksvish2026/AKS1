@@ -2,6 +2,57 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AksTyreProduction.Web.Models;
 
+public static class ApplicationRoles
+{
+    public const string Administrator = "Administrator";
+    public const string Management = "Management";
+    public const string QC = "QC";
+    public const string Receiving = "Receiving";
+    public const string Inspector = "Inspector";
+    public const string ProductionOperator = "Production Operator";
+    public const string Dispatch = "Dispatch";
+
+    public static readonly string[] All =
+    [
+        Administrator,
+        Management,
+        QC,
+        Receiving,
+        Inspector,
+        ProductionOperator,
+        Dispatch
+    ];
+}
+
+public class AppUser
+{
+    public int Id { get; set; }
+    [Required] public string Username { get; set; } = "";
+    [Required] public string PasswordHash { get; set; } = "";
+    [Required] public string RolesCsv { get; set; } = ApplicationRoles.Administrator;
+    public string DefaultRole { get; set; } = ApplicationRoles.Administrator;
+
+    public string SelectedRole
+    {
+        get
+        {
+            var roles = RolesCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (roles.Length == 0)
+            {
+                return ApplicationRoles.Administrator;
+            }
+
+            if (!string.IsNullOrWhiteSpace(DefaultRole) && roles.Contains(DefaultRole, StringComparer.OrdinalIgnoreCase))
+            {
+                return DefaultRole;
+            }
+
+            var firstKnownRole = roles.FirstOrDefault(role => ApplicationRoles.All.Contains(role, StringComparer.OrdinalIgnoreCase));
+            return string.IsNullOrWhiteSpace(firstKnownRole) ? roles[0] : firstKnownRole;
+        }
+    }
+}
+
 public enum JobStatus { InProduction, Rejected, OnHold, QcPassed, ReadyForDispatch, Dispatched, Scrapped }
 public enum TransactionResult { Pending, Pass, Fail, Completed }
 

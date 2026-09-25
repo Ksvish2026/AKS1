@@ -1,4 +1,4 @@
-using AksTyreProduction.Web.Models;
+﻿using AksTyreProduction.Web.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AksTyreProduction.Web.Data;
@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Dispatch> Dispatches => Set<Dispatch>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<AppUser> Users => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -26,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         model.Entity<Tyre>().HasIndex(x => x.SerialNumber);
         model.Entity<RetreadJob>().HasIndex(x => new { x.TyreId, x.RetreadNumber }).IsUnique();
         model.Entity<MaterialBatch>().HasIndex(x => x.LotNumber);
+        model.Entity<AppUser>().HasIndex(x => x.Username).IsUnique();
         model.Entity<RetreadJob>().HasOne(x => x.Dispatch).WithOne(x => x.RetreadJob).HasForeignKey<Dispatch>(x => x.RetreadJobId);
         model.Entity<RetreadJob>().HasOne(x => x.Invoice).WithOne(x => x.RetreadJob).HasForeignKey<Invoice>(x => x.RetreadJobId);
         model.Entity<MaterialUsage>().HasOne(x => x.StationTransaction).WithMany(x => x.MaterialUsages).HasForeignKey(x => x.StationTransactionId).OnDelete(DeleteBehavior.SetNull);
