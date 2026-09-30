@@ -64,6 +64,29 @@ public class ProductionRulesTests
     [Fact] public async Task DraftInvoiceSnapshotsCalculatedSellingPrice()
     {var x=await Setup();x.job.Status=JobStatus.QcPassed;x.job.BaseCost=1000m;x.job.MarkupPercent=25m;await x.db.SaveChangesAsync();var invoice=await x.service.CreateInvoiceAsync(x.job.Id,"INV-TEST");Assert.Equal(1000m,invoice.ProductionCostSnapshot);Assert.Equal(1250m,invoice.SellingPriceSnapshot);}
 
+    [Fact] public void SelectedRetreadDefaultsToLatestHistoryEntryAndHonorsPreviousChoice()
+    {
+        var tyre = new Tyre
+        {
+            Id = 9,
+            AksTyreId = "GTC260099",
+            Brand = "Michelin",
+            Size = "11R22.5",
+            SerialNumber = "HIST-99",
+            Customer = new Customer { Name = "Fleet", AccountNumber = "F-99" },
+            RetreadJobs =
+            [
+                new RetreadJob { Id = 10, RetreadNumber = 1, JobNumber = "R1", ReceivedAt = DateTime.Today.AddDays(-20), Status = JobStatus.Dispatched },
+                new RetreadJob { Id = 11, RetreadNumber = 2, JobNumber = "R2", ReceivedAt = DateTime.Today.AddDays(-10), Status = JobStatus.InProduction },
+                new RetreadJob { Id = 12, RetreadNumber = 3, JobNumber = "R3", ReceivedAt = DateTime.Today, Status = JobStatus.QcPassed }
+            ]
+        };
+
+        Assert.Equal(3, TyreHistory.SelectRetread(tyre, null)!.RetreadNumber);
+        Assert.Equal(1, TyreHistory.SelectRetread(tyre, 10)!.RetreadNumber);
+        Assert.Equal(2, TyreHistory.SelectRetread(tyre, 11)!.RetreadNumber);
+    }
+
     [Fact] public void BarcodeRendererProducesPermanentIdAsSvg()
     {var svg=Code39Barcode.RenderSvg("GTC260001");Assert.Contains("<svg",svg);Assert.Contains("GTC260001",svg);Assert.Contains("<rect",svg);}
 }
