@@ -88,8 +88,13 @@ public class ProductionService(AppDbContext db)
 
     public async Task ReleaseQcAsync(int jobId, int operatorId)
     {
-        var job = await db.RetreadJobs.Include(x => x.StationTransactions).SingleAsync(x => x.Id == jobId);
-        if (!job.StationTransactions.Any(x => x.Station == "Final Inspection" && x.Result == TransactionResult.Pass)) throw new InvalidOperationException("A passed final inspection is required before QC release.");
+        var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);
+        var latestInspection = await db.StationTransactions
+            .Where(x => x.RetreadJobId == jobId && x.Station == "Final Inspection")
+            .OrderByDescending(x => x.StartedAt)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync();
+        if (latestInspection is null || latestInspection.EndedAt is null || latestInspection.Result != TransactionResult.Pass) throw new InvalidOperationException("The latest final inspection must be completed and passed before QC release.");
         job.Status = JobStatus.QcPassed; job.CurrentStage = "QC Passed"; job.QcPassedAt=DateTime.Now;
         Audit(job.TyreId, job.Id, "QC passed", "In Production", "QC Passed");
         await db.SaveChangesAsync();

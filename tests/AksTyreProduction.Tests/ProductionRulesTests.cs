@@ -44,6 +44,9 @@ public class ProductionRulesTests
     [Fact] public async Task QcRequiresPassedFinalInspection()
     {var x=await Setup();x.job.CurrentStage="Final Inspection";await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.ReleaseQcAsync(x.job.Id,x.op.Id));}
 
+    [Fact] public async Task QcRejectsEarlierPassWhenLatestFinalInspectionFails()
+    {var x=await Setup();x.job.CurrentStage="Final Inspection";var first=await x.service.StartStationAsync(x.job.Id,"Final Inspection",x.op.Id,null);await x.service.CompleteStationAsync(first.Id,10,TransactionResult.Pass,"Accepted"," ");x.job.CurrentStage="Final Inspection";var latest=await x.service.StartStationAsync(x.job.Id,"Final Inspection",x.op.Id,null);await x.service.CompleteStationAsync(latest.Id,10,TransactionResult.Fail,"Defect","Bonding void");await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.ReleaseQcAsync(x.job.Id,x.op.Id));Assert.Equal(JobStatus.InProduction,x.job.Status);}
+
     [Fact] public async Task DispatchRequiresQcRelease()
     {var x=await Setup();await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.DispatchAsync(x.job.Id,"D1","Delivery",""));}
 
