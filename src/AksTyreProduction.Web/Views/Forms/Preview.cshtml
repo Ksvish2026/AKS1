@@ -1,0 +1,155 @@
+@model FormPreviewVm
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">PRINTABLE TEMPLATE</div>
+        <h1>@Model.Title</h1>
+        @if (Model.TyreId.HasValue)
+        {
+            <p class="mb-0 muted">@Model.AksTyreId · @Model.CustomerName · Job @Model.JobNumber · Retread #@Model.RetreadNumber</p>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">Back to library</a>
+        <button class="btn btn-primary" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+<div class="form-sheet">
+    @switch (Model.FormKey)
+    {
+        case "tyre-change-slip":
+            <div class="aks-form leaflet">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text big">TYRE CHANGE SLIP</div>
+                    <div class="small-box">@Model.AksTyreId</div>
+                </div>
+                <div class="fields-grid top-lines">
+                    <div class="field long"><label>Client:</label><span>@Model.CustomerName</span></div>
+                    <div class="field"><label>Vehicle:</label><span>@Model.VehicleRegistration</span></div>
+                    <div class="field"><label>Site:</label><span>@Model.SiteName</span></div>
+                    <div class="field"><label>Date:</label><span>@DateTime.Today.ToString("dd MMM yyyy")</span></div>
+                </div>
+                <div class="split-panel">
+                    <div class="panel">
+                        <h4>Tyre removed</h4>
+                        <div class="mini-grid"><span>@Model.Brand</span><span>@Model.Size</span><span>@Model.SerialNumber</span><span>@Model.AksTyreId</span><span>Retread #@Model.RetreadNumber</span><span>@Model.CurrentStage</span></div>
+                    </div>
+                    <div class="panel">
+                        <h4>Tyre fitted</h4>
+                        <div class="mini-grid"><span>@Model.Brand</span><span>@Model.Size</span><span>@Model.SerialNumber</span><span>@Model.AksTyreId</span><span>@Model.Application</span><span>@Model.TotalCost.ToString("C2")</span></div>
+                    </div>
+                </div>
+                <div class="section-row">
+                    <div class="panel compact"><h4>Action</h4><div class="checkline"><span>Scrap</span><span>Fit</span></div></div>
+                    <div class="panel compact"><h4>Remarks</h4><div class="empty-box">@Model.Status</div></div>
+                </div>
+            </div>
+            break;
+
+        case "vehicle-survey":
+            <div class="aks-form leaflet vehicle">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text">VEHICLE SURVEY</div>
+                    <div class="small-box">@Model.VehicleRegistration</div>
+                </div>
+                <div class="survey-head">
+                    <div class="tag">Survey Date</div>
+                    <div class="tag">Vehicle</div>
+                    <div class="tag">Tyre ID</div>
+                    <div class="tag">Comments</div>
+                </div>
+                <div class="survey-body">
+                    <div class="survey-column"><div class="label">Tyre size: @Model.Size</div><div class="label">Pressure</div><div class="label">Wear</div><div class="label">Damage</div></div>
+                    <div class="survey-column"><div class="label">Tread depth</div><div class="label">Condition: @Model.Brand</div><div class="label">Repairs</div><div class="label">Action: @Model.CurrentStage</div></div>
+                    <div class="survey-column wide"><div class="label">Notes</div><div class="notes-box">@Model.CustomerName · @Model.JobNumber</div></div>
+                </div>
+            </div>
+            break;
+
+        case "job-card":
+            <div class="aks-form leaflet jobcard">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text big">JOB CARD</div>
+                    <div class="small-box">@Model.JobNumber</div>
+                </div>
+                <div class="job-grid">
+                    <div class="job-field"><label>Transporter Name</label><span>@Model.CustomerName</span></div>
+                    <div class="job-field"><label>Date</label><span>@(Model.ReceivedAt?.ToString("dd MMM yyyy") ?? DateTime.Today.ToString("dd MMM yyyy"))</span></div>
+                    <div class="job-field"><label>Truck Reg No.</label><span>@Model.VehicleRegistration</span></div>
+                    <div class="job-field"><label>Speed reading</label><span>--</span></div>
+                    <div class="job-field span-2"><label>Service provider details</label><span>@Model.Brand @Model.Size · @Model.AksTyreId</span></div>
+                </div>
+                <div class="sub-grid">
+                    <div class="panel small"><h4>Service provider</h4><p>@Model.CustomerName</p></div>
+                    <div class="panel small"><h4>Location</h4><p>@Model.SiteName</p></div>
+                    <div class="panel small"><h4>Details</h4><p>@Model.Status · @Model.CurrentStage</p></div>
+                </div>
+            </div>
+            break;
+
+        case "mini-risk-assessment":
+            <div class="aks-form leaflet risk">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text big">MINI RISK ASSESSMENT</div>
+                </div>
+                <div class="risk-grid">
+                    <div class="risk-block">Task</div>
+                    <div class="risk-block">Retread @Model.RetreadNumber</div>
+                    <div class="risk-block">Tyre @Model.AksTyreId</div>
+                    <div class="risk-block">Current stage</div>
+                    <div class="risk-block">Hazards observed</div>
+                    <div class="risk-block">Controls</div>
+                </div>
+                <div class="risk-note">Take 5: Stop, assess, and confirm the job is safe before work starts on @Model.CurrentStage.</div>
+            </div>
+            break;
+
+        case "tyre-action":
+            <div class="aks-form leaflet action">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text big">TYRE ACTION</div>
+                    <div class="small-box">@Model.JobNumber</div>
+                </div>
+                <div class="action-grid">
+                    <div class="action-item"><label>Date</label><span>@DateTime.Today.ToString("dd MMM yyyy")</span></div>
+                    <div class="action-item"><label>Company</label><span>@Model.CustomerName</span></div>
+                    <div class="action-item"><label>For attention</label><span>Operations</span></div>
+                    <div class="action-item"><label>Vehicle no.</label><span>@Model.VehicleRegistration</span></div>
+                    <div class="action-item"><label>Vehicle type</label><span>@Model.Application</span></div>
+                    <div class="action-item"><label>Remarks</label><span>@Model.Status</span></div>
+                    <div class="action-item span-3"><label>Other remarks / action required</label><span>@Model.Brand @Model.Size · @Model.AksTyreId · @Model.CurrentStage</span></div>
+                </div>
+            </div>
+            break;
+
+        case "retread-inspection":
+        default:
+            <div class="aks-form leaflet retread">
+                <div class="header-row">
+                    <div class="brand-block"><div class="brand-large">AKS<br />TYRES</div></div>
+                    <div class="header-text big">RETREAD INSPECTION</div>
+                    <div class="small-box">R@Model.RetreadNumber</div>
+                </div>
+                <div class="inspection-grid">
+                    <div class="field"><label>Tyre ID</label><span>@Model.AksTyreId</span></div>
+                    <div class="field"><label>Size</label><span>@Model.Size</span></div>
+                    <div class="field"><label>Serial</label><span>@Model.SerialNumber</span></div>
+                    <div class="field"><label>Condition</label><span>@Model.Status</span></div>
+                    <div class="field"><label>Tread</label><span>@Model.Brand</span></div>
+                    <div class="field"><label>Repair</label><span>@Model.CurrentStage</span></div>
+                    <div class="field span-2"><label>Defect summary</label><span>@Model.CustomerName · @Model.JobNumber</span></div>
+                    <div class="field span-2"><label>Operator sign-off</label><span>@Model.QcOperatorName</span></div>
+                </div>
+            </div>
+            break;
+    }
+</div>

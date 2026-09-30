@@ -1,0 +1,73 @@
+@{
+    ViewData["Title"] = "Forms Library";
+}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">AKS DOCUMENTS</div>
+        <h1>Printable AKS Forms</h1>
+        <p>Six operational paper forms aligned to the retread and tyre management workflow.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Tyre Change Slip</h3></div>
+            <div class="card-body">
+                <p class="muted">Removal, re-fit, tyre condition, and cost summary for replacement activity.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="tyre-change-slip">Open form</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Vehicle Survey</h3></div>
+            <div class="card-body">
+                <p class="muted">Vehicle-level inspection and tyre-change tracking form for fleet checks.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="vehicle-survey">Open form</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Job Card</h3></div>
+            <div class="card-body">
+                <p class="muted">Service provider, job details, tyre movements, and work completion tracking.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="job-card">Open form</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Mini Risk Assessment</h3></div>
+            <div class="card-body">
+                <p class="muted">Pre-task safety checks, hazard review, and sign-off for working safely.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="mini-risk-assessment">Open form</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Tyre Action</h3></div>
+            <div class="card-body">
+                <p class="muted">Tyre action register for customer reporting, vehicle issue tracking, and follow-up.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="tyre-action">Open form</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lift-panel h-100">
+            <div class="card-header"><h3>Retread Inspection</h3></div>
+            <div class="card-body">
+                <p class="muted">Inspection and decision sheet capturing tread, casing, repair, and retention status.</p>
+                <a class="btn btn-primary" asp-action="Preview" asp-route-id="retread-inspection">Open form</a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,8 @@
+using AksTyreProduction.Web.Controllers;
 using AksTyreProduction.Web.Data;
 using AksTyreProduction.Web.Models;
 using AksTyreProduction.Web.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AksTyreProduction.Tests;
@@ -45,6 +47,33 @@ public class ProductionRulesTests
 
     [Fact] public async Task QcRequiresPassedFinalInspection()
     {var x=await Setup();x.job.CurrentStage="Final Inspection";await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.ReleaseQcAsync(x.job.Id,x.op.Id));}
+
+    [Fact] public async Task FinalInspectionCanBeReopenedWhenThePreviousResultWasIncorrect()
+    {
+        var x = await Setup();
+        x.job.CurrentStage = "QC Release";
+        x.job.Status = JobStatus.InProduction;
+        x.db.StationTransactions.Add(new StationTransaction
+        {
+            RetreadJobId = x.job.Id,
+            Station = "Final Inspection",
+            OperatorId = x.op.Id,
+            StartedAt = DateTime.Now.AddMinutes(-20),
+            EndedAt = DateTime.Now.AddMinutes(-10),
+            DurationMinutes = 10,
+            LabourRateSnapshot = x.op.LabourRate,
+            LabourCost = 25m,
+            Result = TransactionResult.Completed,
+            Notes = "Wrong previous result"
+        });
+        await x.db.SaveChangesAsync();
+
+        await x.service.ReopenFinalInspectionAsync(x.job.Id, x.op.Id);
+        var reopened = await x.service.StartStationAsync(x.job.Id, "Final Inspection", x.op.Id, null);
+
+        Assert.Equal("Final Inspection", x.job.CurrentStage);
+        Assert.Equal("Final Inspection", reopened.Station);
+    }
 
     [Fact] public async Task QcRejectsEarlierPassWhenLatestFinalInspectionFails()
     {var x=await Setup();x.job.CurrentStage="Final Inspection";var first=await x.service.StartStationAsync(x.job.Id,"Final Inspection",x.op.Id,null);await Complete(x.service,first,10,TransactionResult.Pass,"Accepted",null);x.job.CurrentStage="Final Inspection";var latest=await x.service.StartStationAsync(x.job.Id,"Final Inspection",x.op.Id,null);await Complete(x.service,latest,10,TransactionResult.Fail,"Defect","Bonding void");await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.ReleaseQcAsync(x.job.Id,x.op.Id));Assert.Equal(JobStatus.InProduction,x.job.Status);}
@@ -92,6 +121,37 @@ public class ProductionRulesTests
         var job = new RetreadJob { Status = JobStatus.Rejected, RejectionReason = "Casing separation" };
         Assert.Equal("Casing separation", job.RejectionReason);
         Assert.Equal(RetreadJob.DefaultCustomerVisibleRejectionMessage, job.CustomerFacingStatusMessage);
+    }
+
+    [Fact] public async Task FormsPreviewLoadsLiveTyreDataForSelectedRetread()
+    {
+        var db = Database();
+        var customer = new Customer { Name = "Northfleet", AccountNumber = "NF-42" };
+        var tyre = new Tyre
+        {
+            AksTyreId = "GTC260123",
+            Brand = "Michelin",
+            Size = "11R22.5",
+            SerialNumber = "SER-123",
+            Customer = customer,
+            RetreadJobs =
+            [
+                new RetreadJob { RetreadNumber = 1, JobNumber = "JOB-01", ReceivedAt = DateTime.Today.AddDays(-7), CurrentStage = "Curing", Status = JobStatus.Dispatched },
+                new RetreadJob { RetreadNumber = 2, JobNumber = "JOB-42", ReceivedAt = DateTime.Today, CurrentStage = "Final Inspection", Status = JobStatus.InProduction }
+            ]
+        };
+        db.Tyres.Add(tyre);
+        await db.SaveChangesAsync();
+
+        var controller = new FormsController(db);
+        var result = await controller.Preview("retread-inspection", tyre.Id, tyre.RetreadJobs.Last().Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<FormPreviewVm>(view.Model);
+        Assert.Equal("GTC260123", model.AksTyreId);
+        Assert.Equal("JOB-42", model.JobNumber);
+        Assert.Equal("Final Inspection", model.CurrentStage);
+        Assert.Equal("Northfleet", model.CustomerName);
     }
 
     [Fact] public void BarcodeRendererProducesPermanentIdAsSvg()
