@@ -107,6 +107,8 @@ public static class TyreHistory
 
 public class RetreadJob
 {
+    public const string DefaultCustomerVisibleRejectionMessage = "This tyre has been rejected and requires a manual review before it can proceed.";
+
     public int Id { get; set; }
     public int TyreId { get; set; }
     public Tyre Tyre { get; set; } = null!;
@@ -125,6 +127,8 @@ public class RetreadJob
     public string? QcOperatorNameSnapshot { get; set; }
     public DateTime? ReadyForDispatchAt { get; set; }
     public string? RejectionReason { get; set; }
+    public string? CustomerVisibleRejectionNote { get; set; }
+    public string CustomerFacingStatusMessage => Status == JobStatus.Rejected ? (!string.IsNullOrWhiteSpace(CustomerVisibleRejectionNote) ? CustomerVisibleRejectionNote : DefaultCustomerVisibleRejectionMessage) : "";
     public List<StationTransaction> StationTransactions { get; set; } = [];
     public List<MaterialUsage> MaterialUsages { get; set; } = [];
     public List<Repair> Repairs { get; set; } = [];

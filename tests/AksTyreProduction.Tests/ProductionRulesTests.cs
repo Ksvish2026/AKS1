@@ -87,6 +87,13 @@ public class ProductionRulesTests
         Assert.Equal(2, TyreHistory.SelectRetread(tyre, 11)!.RetreadNumber);
     }
 
+    [Fact] public void RejectedJobsKeepInternalDetailsButUseGenericCustomerMessage()
+    {
+        var job = new RetreadJob { Status = JobStatus.Rejected, RejectionReason = "Casing separation" };
+        Assert.Equal("Casing separation", job.RejectionReason);
+        Assert.Equal(RetreadJob.DefaultCustomerVisibleRejectionMessage, job.CustomerFacingStatusMessage);
+    }
+
     [Fact] public void BarcodeRendererProducesPermanentIdAsSvg()
     {var svg=Code39Barcode.RenderSvg("GTC260001");Assert.Contains("<svg",svg);Assert.Contains("GTC260001",svg);Assert.Contains("<rect",svg);}
 }
