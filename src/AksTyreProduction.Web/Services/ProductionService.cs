@@ -92,6 +92,32 @@ public class ProductionService(AppDbContext db)
         return usage;
     }
 
+    public async Task ReopenFinalInspectionAsync(int jobId, int operatorId)
+    {
+        var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);
+        if (job.Status != JobStatus.InProduction) throw new InvalidOperationException("Only in-production jobs can be re-opened for a new final inspection.");
+        if (!string.Equals(job.CurrentStage, "QC Release", StringComparison.Ordinal)) throw new InvalidOperationException("Final inspection can only be reopened while the job is waiting for QC release.");
+
+        var qcOperator = await db.Operators.SingleOrDefaultAsync(x => x.Id == operatorId && x.Active)
+            ?? throw new InvalidOperationException("Select an active operator to reopen the final inspection.");
+
+        var latestInspection = await db.StationTransactions
+            .Where(x => x.RetreadJobId == jobId && x.Station == "Final Inspection")
+            .OrderByDescending(x => x.StartedAt)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (latestInspection is not null && latestInspection.Result == TransactionResult.Pass)
+        {
+            throw new InvalidOperationException("A passed final inspection is already on record. Use QC release or reopen a failed/incorrect result workflow before re-inspecting.");
+        }
+
+        job.CurrentStage = "Final Inspection";
+        job.Status = JobStatus.InProduction;
+        Audit(job.TyreId, job.Id, "Final inspection reopened", "QC Release", "Final Inspection", qcOperator.Name);
+        await db.SaveChangesAsync();
+    }
+
     public async Task ReleaseQcAsync(int jobId, int operatorId)
     {
         var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);

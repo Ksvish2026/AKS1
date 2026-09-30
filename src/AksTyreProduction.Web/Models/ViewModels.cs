@@ -43,4 +43,30 @@ public class StationVm
     public string Station { get; set; }="Buffing"; public string? TyreCode { get; set; } public RetreadJob? Job { get; set; }
     public List<Operator> Operators { get; set; }=[]; public List<Machine> Machines { get; set; }=[]; public StationTransaction? Active { get; set; }
 }
+public class FormPreviewVm
+{
+    public string FormKey { get; set; } = "tyre-change-slip";
+    public string Title { get; set; } = "Tyre Change Slip";
+    public int? TyreId { get; set; }
+    public int? RetreadId { get; set; }
+    public string AksTyreId { get; set; } = "GTC260001";
+    public string CustomerName { get; set; } = "AKS Customer";
+    public string Brand { get; set; } = "Michelin";
+    public string Size { get; set; } = "11R22.5";
+    public string SerialNumber { get; set; } = "SER-0001";
+    public string JobNumber { get; set; } = "JOB-0001";
+    public int RetreadNumber { get; set; } = 1;
+    public string CurrentStage { get; set; } = "Initial Inspection";
+    public string Status { get; set; } = "In Production";
+    public DateTime? ReceivedAt { get; set; }
+    public DateTime? EstimatedCompletion { get; set; }
+    public DateTime? QcPassedAt { get; set; }
+    public string QcOperatorName { get; set; } = "Unassigned";
+    public string VehicleRegistration { get; set; } = "Vehicle registration";
+    public string SiteName { get; set; } = "AKS Depot";
+    public string Application { get; set; } = "Commercial";
+    public decimal MaterialCost { get; set; }
+    public decimal LabourCost { get; set; }
+    public decimal TotalCost { get; set; }
+}
 public record CustomerProgressDto(string AksTyreId,string Customer,string Brand,string Size,string SerialNumber,int RetreadNumber,string CurrentStage,DateTime? EstimatedCompletion,IReadOnlyList<string> CompletedStages);

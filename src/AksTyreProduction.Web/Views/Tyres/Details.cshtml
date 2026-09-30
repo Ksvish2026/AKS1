@@ -66,6 +66,12 @@
                 }
             </div>
             <a class="btn btn-sm btn-primary mt-3" asp-controller="Stations" asp-action="Index" asp-route-station="@current.CurrentStage" asp-route-tyreCode="@Model.AksTyreId">Open Factory Station</a>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Forms" asp-action="Preview" asp-route-id="retread-inspection" asp-route-tyreId="@Model.Id" asp-route-retreadId="@current.Id">Retread Inspection</a>
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Forms" asp-action="Preview" asp-route-id="job-card" asp-route-tyreId="@Model.Id" asp-route-retreadId="@current.Id">Job Card</a>
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Forms" asp-action="Preview" asp-route-id="tyre-action" asp-route-tyreId="@Model.Id" asp-route-retreadId="@current.Id">Tyre Action</a>
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Forms" asp-action="Preview" asp-route-id="vehicle-survey" asp-route-tyreId="@Model.Id" asp-route-retreadId="@current.Id">Vehicle Survey</a>
+            </div>
         </div>
     </div>
 </div>
