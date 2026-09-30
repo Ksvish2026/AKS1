@@ -92,30 +92,47 @@ public class ProductionService(AppDbContext db)
         return usage;
     }
 
-    public async Task ReopenFinalInspectionAsync(int jobId, int operatorId)
+    public async Task ReopenJobAsync(int jobId, int operatorId, string? targetStage = null)
     {
         var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);
-        if (job.Status != JobStatus.InProduction) throw new InvalidOperationException("Only in-production jobs can be re-opened for a new final inspection.");
-        if (!string.Equals(job.CurrentStage, "QC Release", StringComparison.Ordinal)) throw new InvalidOperationException("Final inspection can only be reopened while the job is waiting for QC release.");
+        if (job.Status == JobStatus.Dispatched || job.Status == JobStatus.Scrapped)
+            throw new InvalidOperationException("Dispatched or scrapped jobs cannot be reopened.");
 
-        var qcOperator = await db.Operators.SingleOrDefaultAsync(x => x.Id == operatorId && x.Active)
-            ?? throw new InvalidOperationException("Select an active operator to reopen the final inspection.");
-
-        var latestInspection = await db.StationTransactions
-            .Where(x => x.RetreadJobId == jobId && x.Station == "Final Inspection")
-            .OrderByDescending(x => x.StartedAt)
-            .ThenByDescending(x => x.Id)
-            .FirstOrDefaultAsync();
-
-        if (latestInspection is not null && latestInspection.Result == TransactionResult.Pass)
+        var stage = string.IsNullOrWhiteSpace(targetStage) ? job.CurrentStage : targetStage;
+        if (!Workflow.Stages.Contains(stage, StringComparer.Ordinal) || stage is "Receiving" or "QC Release" or "Dispatch")
         {
-            throw new InvalidOperationException("A passed final inspection is already on record. Use QC release or reopen a failed/incorrect result workflow before re-inspecting.");
+            if (string.Equals(job.CurrentStage, "QC Release", StringComparison.Ordinal))
+            {
+                stage = "Final Inspection";
+            }
+            else if (string.Equals(job.CurrentStage, "Ready for Dispatch", StringComparison.Ordinal))
+            {
+                stage = "QC Release";
+            }
+            else
+            {
+                throw new InvalidOperationException($"The job cannot be reopened to '{stage}'.");
+            }
         }
 
-        job.CurrentStage = "Final Inspection";
+        var operatorEntity = await db.Operators.SingleOrDefaultAsync(x => x.Id == operatorId && x.Active)
+            ?? throw new InvalidOperationException("Select an active operator to reopen the job.");
+
         job.Status = JobStatus.InProduction;
-        Audit(job.TyreId, job.Id, "Final inspection reopened", "QC Release", "Final Inspection", qcOperator.Name);
+        job.CurrentStage = stage;
+        job.QcPassedAt = null;
+        job.QcOperatorId = null;
+        job.QcOperatorNameSnapshot = null;
+        job.ReadyForDispatchAt = null;
+        job.CompletedAt = null;
+
+        Audit(job.TyreId, job.Id, "Job reopened", job.CurrentStage, stage, operatorEntity.Name);
         await db.SaveChangesAsync();
+    }
+
+    public async Task ReopenFinalInspectionAsync(int jobId, int operatorId)
+    {
+        await ReopenJobAsync(jobId, operatorId, "Final Inspection");
     }
 
     public async Task ReleaseQcAsync(int jobId, int operatorId)

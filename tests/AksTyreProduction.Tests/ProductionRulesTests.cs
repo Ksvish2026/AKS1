@@ -48,7 +48,7 @@ public class ProductionRulesTests
     [Fact] public async Task QcRequiresPassedFinalInspection()
     {var x=await Setup();x.job.CurrentStage="Final Inspection";await Assert.ThrowsAsync<InvalidOperationException>(()=>x.service.ReleaseQcAsync(x.job.Id,x.op.Id));}
 
-    [Fact] public async Task FinalInspectionCanBeReopenedWhenThePreviousResultWasIncorrect()
+    [Fact] public async Task AnyJobCanBeReopenedToItsCorrectStageWhenPreviousResultWasIncorrect()
     {
         var x = await Setup();
         x.job.CurrentStage = "QC Release";
@@ -68,9 +68,10 @@ public class ProductionRulesTests
         });
         await x.db.SaveChangesAsync();
 
-        await x.service.ReopenFinalInspectionAsync(x.job.Id, x.op.Id);
+        await x.service.ReopenJobAsync(x.job.Id, x.op.Id, "Final Inspection");
         var reopened = await x.service.StartStationAsync(x.job.Id, "Final Inspection", x.op.Id, null);
 
+        Assert.Equal(JobStatus.InProduction, x.job.Status);
         Assert.Equal("Final Inspection", x.job.CurrentStage);
         Assert.Equal("Final Inspection", reopened.Station);
     }
