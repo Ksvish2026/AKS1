@@ -89,6 +89,22 @@ public class Tyre
     public List<RetreadJob> RetreadJobs { get; set; } = [];
 }
 
+public static class TyreHistory
+{
+    public static RetreadJob? SelectRetread(Tyre tyre, int? retreadId)
+    {
+        ArgumentNullException.ThrowIfNull(tyre);
+
+        var ordered = tyre.RetreadJobs.OrderByDescending(x => x.RetreadNumber).ToList();
+        if (retreadId.HasValue)
+        {
+            return ordered.FirstOrDefault(x => x.Id == retreadId.Value) ?? ordered.FirstOrDefault();
+        }
+
+        return ordered.FirstOrDefault();
+    }
+}
+
 public class RetreadJob
 {
     public int Id { get; set; }

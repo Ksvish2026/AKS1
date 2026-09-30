@@ -2,7 +2,9 @@
 @inject AksTyreProduction.Web.Data.AppDbContext Db
 @{
     ViewData["Title"] = $"Passport {Model.AksTyreId}";
-    var current = Model.RetreadJobs.OrderByDescending(x => x.RetreadNumber).First();
+    var current = TyreHistory.SelectRetread(Model, null) ?? Model.RetreadJobs.OrderByDescending(x => x.RetreadNumber).First();
+    var selectedRetreadId = ViewBag.SelectedRetreadId is int selectedId && selectedId > 0 ? selectedId : current.Id;
+    var selected = TyreHistory.SelectRetread(Model, selectedRetreadId) ?? current;
     var materials = Db.Materials.Include(x => x.Batches).Where(x => x.Active).ToList();
     string R(decimal v) => v.ToString("C2", CultureInfo.GetCultureInfo("en-ZA"));
 }
@@ -249,16 +251,96 @@
 </section>
 
 <section class="card lift-panel mb-4">
+    <div class="card-header">Selected Retread Detail</div>
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <strong>@selected.JobNumber</strong>
+                <div class="muted">Retread #@selected.RetreadNumber · Received @selected.ReceivedAt.ToString("dd MMM yyyy HH:mm")</div>
+            </div>
+            <div class="text-end">
+                <span class="status-pill @(selected.Status == JobStatus.Rejected ? "status-danger" : "status-active")">@selected.Status</span>
+                @if (selected.Id != current.Id)
+                {
+                    <div class="mt-2"><a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Return to current retread</a></div>
+                }
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <h6>Timeline</h6>
+                <div class="timeline">
+                    @foreach (var tx in selected.StationTransactions.OrderByDescending(x => x.StartedAt))
+                    {
+                        var details = JsonSerializer.Deserialize<Dictionary<string, string>>(tx.DetailsJson ?? "{}") ?? new Dictionary<string, string>();
+                        <div class="timeline-item @(tx.Result == TransactionResult.Fail ? "failed" : "")">
+                            <div class="d-flex justify-content-between">
+                                <strong>@tx.Station · @tx.Result</strong>
+                                <small>@tx.StartedAt.ToString("dd MMM HH:mm") @if (tx.EndedAt.HasValue) { <span>to @tx.EndedAt.Value.ToString("dd MMM HH:mm")</span> }</small>
+                            </div>
+                            <div class="muted">@tx.Operator.Name · @tx.DurationMinutes min · Labour @R(tx.LabourCost)</div>
+                            <div>@tx.Notes @tx.FailureReason</div>
+                            @if (details.Any())
+                            {
+                                <div class="small mt-1">
+                                    @foreach (var d in details.Where(x => !string.IsNullOrWhiteSpace(x.Value)))
+                                    {
+                                        <span class="badge text-bg-light me-1">@d.Key: @d.Value</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (!selected.StationTransactions.Any())
+                    {
+                        <p class="mb-0">No production events recorded for this retread.</p>
+                    }
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <h6>Cost breakdown</h6>
+                <div class="detail-list">
+                    <div class="d-flex justify-content-between"><span>Base cost</span><span>@R(selected.BaseCost)</span></div>
+                    @foreach (var group in selected.MaterialUsages.GroupBy(x => x.Material.Name))
+                    {
+                        <div class="d-flex justify-content-between"><span>@group.Key</span><span>@R(group.Sum(x => x.TotalCost))</span></div>
+                    }
+                    <div class="d-flex justify-content-between"><span>Labour</span><span>@R(selected.LabourCost)</span></div>
+                    <hr />
+                    <div class="d-flex justify-content-between fs-5"><strong>Total cost</strong><strong>@R(selected.TotalCost)</strong></div>
+                </div>
+
+                <h6 class="mt-4">Repairs</h6>
+                @if (selected.Repairs.Any())
+                {
+                    <ul class="list-unstyled small mb-0">
+                        @foreach (var repair in selected.Repairs)
+                        {
+                            <li class="mb-2"><strong>@repair.Type</strong> · @repair.Location · @repair.PatchSize<br /><span class="muted">@repair.Description</span></li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="muted mb-0">No repairs recorded.</p>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="card lift-panel mb-4">
     <div class="card-header">Lifetime Retread History</div>
     <div class="table-responsive">
         <table class="table mb-0">
             <thead>
-                <tr><th>Retread</th><th>Job</th><th>Received</th><th>Completed</th><th>Result</th><th>Events</th><th>Repairs</th><th>Cost</th></tr>
+                <tr><th>Retread</th><th>Job</th><th>Received</th><th>Completed</th><th>Result</th><th>Events</th><th>Repairs</th><th>Cost</th><th></th></tr>
             </thead>
             <tbody>
                 @foreach (var job in Model.RetreadJobs.OrderByDescending(x => x.RetreadNumber))
                 {
-                    <tr>
+                    <tr class="@(job.Id == selected.Id ? "table-active" : "")">
                         <td class="fw-bold">#@job.RetreadNumber</td>
                         <td>@job.JobNumber</td>
                         <td>@job.ReceivedAt.ToString("dd MMM yyyy")</td>
@@ -267,6 +349,9 @@
                         <td>@job.StationTransactions.Count</td>
                         <td>@job.Repairs.Count</td>
                         <td class="money">@R(job.TotalCost)</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@Model.Id" asp-route-retreadId="@job.Id">View</a>
+                        </td>
                     </tr>
                 }
             </tbody>

@@ -13,10 +13,12 @@ public class TyresController(AppDbContext db,ProductionService service,IWebHostE
         if(!string.IsNullOrWhiteSpace(q)) query=query.Where(x=>x.AksTyreId.Contains(q)||x.SerialNumber.Contains(q)||x.Customer.Name.Contains(q)||x.Customer.AccountNumber.Contains(q)||x.RetreadJobs.Any(j=>j.JobNumber.Contains(q)));
         ViewBag.Query=q; return View(await query.OrderBy(x=>x.AksTyreId).ToListAsync());
     }
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(int id, int? retreadId)
     {
         var tyre=await db.Tyres.Include(x=>x.Customer).Include(x=>x.RetreadJobs).ThenInclude(x=>x.StationTransactions).ThenInclude(x=>x.Operator).Include(x=>x.RetreadJobs).ThenInclude(x=>x.MaterialUsages).ThenInclude(x=>x.Material).Include(x=>x.RetreadJobs).ThenInclude(x=>x.MaterialUsages).ThenInclude(x=>x.MaterialBatch).Include(x=>x.RetreadJobs).ThenInclude(x=>x.Repairs).Include(x=>x.RetreadJobs).ThenInclude(x=>x.Photos).Include(x=>x.RetreadJobs).ThenInclude(x=>x.Invoice).SingleOrDefaultAsync(x=>x.Id==id);
-        return tyre==null?NotFound():View(tyre);
+        if (tyre == null) return NotFound();
+        ViewBag.SelectedRetreadId = TyreHistory.SelectRetread(tyre, retreadId)?.Id ?? 0;
+        return View(tyre);
     }
     [HttpGet] public async Task<IActionResult> Receive(){ViewBag.Customers=await db.Customers.OrderBy(x=>x.Name).ToListAsync();return View(new ReceiveVm());}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Receive(ReceiveVm vm)
