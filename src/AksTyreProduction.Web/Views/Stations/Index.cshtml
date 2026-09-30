@@ -9,7 +9,7 @@
 @if(Model.Station=="QC Release")
 {
     @if(Model.Job.Status==JobStatus.InProduction){<form asp-action="ReleaseQc" method="post"><input type="hidden" name="jobId" value="@Model.Job.Id"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/><label class="form-label">QC Inspector</label><select name="operatorId" class="form-select mb-3">@foreach(var op in Model.Operators){<option value="@op.Id">@op.Name · @op.Role</option>}</select><button class="btn btn-success btn-lg w-100">PASS QUALITY CONTROL</button></form>}
-    else if(Model.Job.Status==JobStatus.QcPassed){<div class="alert alert-success">QC passed at @Model.Job.QcPassedAt?.ToString("dd MMM HH:mm"). Release the tyre when paperwork and invoicing are ready.</div><form asp-action="MarkReady" method="post"><input type="hidden" name="jobId" value="@Model.Job.Id"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/><button class="btn btn-primary btn-lg w-100">MARK READY FOR DISPATCH</button></form>}
+    else if(Model.Job.Status==JobStatus.QcPassed){<div class="alert alert-success">QC passed at @Model.Job.QcPassedAt?.ToString("dd MMM HH:mm") by @Model.Job.QcOperatorNameSnapshot. Release the tyre when paperwork and invoicing are ready.</div><form asp-action="MarkReady" method="post"><input type="hidden" name="jobId" value="@Model.Job.Id"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/><button class="btn btn-primary btn-lg w-100">MARK READY FOR DISPATCH</button></form>}
     else{<div class="alert alert-success">Current status: <strong>@Model.Job.Status</strong></div>}
 }
 else if(Model.Station=="Dispatch")
@@ -24,7 +24,7 @@ else
 {
 <div class="alert alert-warning"><strong>Active since @Model.Active.StartedAt.ToString("HH:mm")</strong><br/>@Model.Active.Station · Rate captured R@Model.Active.LabourRateSnapshot.ToString("N2")/hr</div>
 <form asp-action="Complete" method="post"><input type="hidden" name="transactionId" value="@Model.Active.Id"/><input type="hidden" name="station" value="@Model.Station"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/>
-<div class="row g-2"><div class="col-md-6"><label class="form-label">Result</label><select name="result" class="form-select"><option value="Completed">Complete</option><option value="Pass">Pass</option><option value="Fail">Fail / Rework</option></select></div><div class="col-md-6"><label class="form-label">Demo Duration (minutes)</label><input name="durationMinutes" type="number" min="1" value="30" class="form-control"/></div></div>
+<label class="form-label">Result</label><select name="result" class="form-select"><option value="Completed">Complete</option><option value="Pass">Pass</option><option value="Fail">Fail / Rework</option></select>
 @if(Model.Station is "Initial Inspection" or "Shearography / NDT" or "Final Inspection")
 {<label class="form-label mt-3">Failure reason</label><select name="failureReason" class="form-select"><option value="">None / passed</option><option>Sidewall damage</option><option>Bead damage</option><option>Casing separation</option><option>Excessive wear</option><option>Run-flat damage</option><option>Belt damage</option><option>Inner liner damage</option><option>Previous repair unacceptable</option><option>Casing beyond repair</option><option>Other</option></select>}
 else{<label class="form-label mt-3">Failure / defect reason</label><input name="failureReason" class="form-control" placeholder="Required for a failure"/>}

@@ -28,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         model.Entity<RetreadJob>().HasIndex(x => new { x.TyreId, x.RetreadNumber }).IsUnique();
         model.Entity<MaterialBatch>().HasIndex(x => x.LotNumber);
         model.Entity<AppUser>().HasIndex(x => x.Username).IsUnique();
+        model.Entity<RetreadJob>().HasOne(x => x.QcOperator).WithMany().HasForeignKey(x => x.QcOperatorId).OnDelete(DeleteBehavior.SetNull);
         model.Entity<RetreadJob>().HasOne(x => x.Dispatch).WithOne(x => x.RetreadJob).HasForeignKey<Dispatch>(x => x.RetreadJobId);
         model.Entity<RetreadJob>().HasOne(x => x.Invoice).WithOne(x => x.RetreadJob).HasForeignKey<Invoice>(x => x.RetreadJobId);
         model.Entity<MaterialUsage>().HasOne(x => x.StationTransaction).WithMany(x => x.MaterialUsages).HasForeignKey(x => x.StationTransactionId).OnDelete(DeleteBehavior.SetNull);
