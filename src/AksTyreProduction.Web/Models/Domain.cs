@@ -104,6 +104,9 @@ public class RetreadJob
     public decimal MarkupPercent { get; set; } = 25m;
     public DateTime? EstimatedCompletion { get; set; }
     public DateTime? QcPassedAt { get; set; }
+    public int? QcOperatorId { get; set; }
+    public Operator? QcOperator { get; set; }
+    public string? QcOperatorNameSnapshot { get; set; }
     public DateTime? ReadyForDispatchAt { get; set; }
     public string? RejectionReason { get; set; }
     public List<StationTransaction> StationTransactions { get; set; } = [];

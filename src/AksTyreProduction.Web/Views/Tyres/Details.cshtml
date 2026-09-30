@@ -52,6 +52,10 @@
         <div class="card-body detail-list">
             <strong>@current.JobNumber</strong>
             <p>Received @current.ReceivedAt.ToString("dd MMM yyyy HH:mm")</p>
+            @if (current.QcPassedAt.HasValue)
+            {
+                <p>QC passed by @current.QcOperatorNameSnapshot at @current.QcPassedAt.Value.ToString("dd MMM yyyy HH:mm")</p>
+            }
             <div class="station-steps">
                 @foreach (var stage in Workflow.Stages)
                 {
@@ -75,7 +79,7 @@
                     <div class="timeline-item @(tx.Result == TransactionResult.Fail ? "failed" : "")">
                         <div class="d-flex justify-content-between">
                             <strong>@tx.Station · @tx.Result</strong>
-                            <small>@tx.StartedAt.ToString("dd MMM HH:mm")</small>
+                            <small>@tx.StartedAt.ToString("dd MMM HH:mm") @if (tx.EndedAt.HasValue) { <span>to @tx.EndedAt.Value.ToString("dd MMM HH:mm")</span> }</small>
                         </div>
                         <div class="muted">@tx.Operator.Name · @tx.DurationMinutes min · Labour @R(tx.LabourCost)</div>
                         <div>@tx.Notes @tx.FailureReason</div>

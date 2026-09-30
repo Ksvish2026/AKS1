@@ -44,13 +44,14 @@ public class ProductionService(AppDbContext db)
         return tx;
     }
 
-    public async Task CompleteStationAsync(int transactionId, int durationMinutes, TransactionResult result, string notes, string? failureReason, string? detailsJson=null)
+    public async Task CompleteStationAsync(int transactionId, TransactionResult result, string notes, string? failureReason, DateTime completedAt, string? detailsJson=null)
     {
         var tx = await db.StationTransactions.Include(x => x.RetreadJob).SingleAsync(x => x.Id == transactionId);
         if (tx.EndedAt != null) throw new InvalidOperationException("This transaction is already complete.");
-        if (durationMinutes <= 0) durationMinutes = Math.Max(1, (int)(DateTime.Now - tx.StartedAt).TotalMinutes);
+        if (completedAt < tx.StartedAt) throw new InvalidOperationException("Completion time cannot be earlier than the station start time.");
+        var durationMinutes = Math.Max(1, (int)Math.Round((completedAt - tx.StartedAt).TotalMinutes, MidpointRounding.AwayFromZero));
         tx.DurationMinutes = durationMinutes;
-        tx.EndedAt = tx.StartedAt.AddMinutes(durationMinutes);
+        tx.EndedAt = completedAt;
         tx.Result = result;
         tx.Notes = notes ?? "";
         tx.FailureReason = failureReason;
@@ -89,6 +90,8 @@ public class ProductionService(AppDbContext db)
     public async Task ReleaseQcAsync(int jobId, int operatorId)
     {
         var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);
+        var qcOperator = await db.Operators.SingleOrDefaultAsync(x => x.Id == operatorId && x.Active)
+            ?? throw new InvalidOperationException("Select an active QC operator.");
         var latestInspection = await db.StationTransactions
             .Where(x => x.RetreadJobId == jobId && x.Station == "Final Inspection")
             .OrderByDescending(x => x.StartedAt)
@@ -96,7 +99,9 @@ public class ProductionService(AppDbContext db)
             .FirstOrDefaultAsync();
         if (latestInspection is null || latestInspection.EndedAt is null || latestInspection.Result != TransactionResult.Pass) throw new InvalidOperationException("The latest final inspection must be completed and passed before QC release.");
         job.Status = JobStatus.QcPassed; job.CurrentStage = "QC Passed"; job.QcPassedAt=DateTime.Now;
-        Audit(job.TyreId, job.Id, "QC passed", "In Production", "QC Passed");
+        job.QcOperatorId = qcOperator.Id;
+        job.QcOperatorNameSnapshot = qcOperator.Name;
+        Audit(job.TyreId, job.Id, "QC passed", "In Production", "QC Passed", qcOperator.Name);
         await db.SaveChangesAsync();
     }
 
@@ -139,5 +144,5 @@ public class ProductionService(AppDbContext db)
         await db.SaveChangesAsync();
     }
 
-    private void Audit(int? tyreId, int? jobId, string action, string? oldValue, string? newValue) => db.AuditEvents.Add(new AuditEvent { TyreId = tyreId, RetreadJobId = jobId, Action = action, OldValue = oldValue, NewValue = newValue, OccurredAt = DateTime.Now });
+    private void Audit(int? tyreId, int? jobId, string action, string? oldValue, string? newValue, string? user = null) => db.AuditEvents.Add(new AuditEvent { TyreId = tyreId, RetreadJobId = jobId, User = user ?? "Demo Administrator", Action = action, OldValue = oldValue, NewValue = newValue, OccurredAt = DateTime.Now });
 }
