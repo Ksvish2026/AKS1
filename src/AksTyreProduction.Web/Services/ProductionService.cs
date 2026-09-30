@@ -58,7 +58,12 @@ public class ProductionService(AppDbContext db)
         tx.DetailsJson = detailsJson;
         tx.LabourCost = decimal.Round(tx.LabourRateSnapshot * durationMinutes / 60m, 2);
         var job = tx.RetreadJob;
-        if (result == TransactionResult.Fail && tx.Station is "Initial Inspection" or "Shearography / NDT") { job.Status = JobStatus.Rejected; job.RejectionReason = failureReason; }
+        if (result == TransactionResult.Fail && tx.Station is "Initial Inspection" or "Shearography / NDT")
+        {
+            job.Status = JobStatus.Rejected;
+            job.RejectionReason = failureReason;
+            job.CustomerVisibleRejectionNote = RetreadJob.DefaultCustomerVisibleRejectionMessage;
+        }
         else if (result == TransactionResult.Fail && tx.Station == "Final Inspection") job.CurrentStage = "Casing Repair";
         else { var index = Array.IndexOf(Workflow.Stages, tx.Station); job.CurrentStage = index >= 0 && index < Workflow.Stages.Length - 1 ? Workflow.Stages[index + 1] : tx.Station; }
         Audit(job.TyreId, job.Id, $"{tx.Station} completed", "Active", $"{result} ({durationMinutes} min)");
