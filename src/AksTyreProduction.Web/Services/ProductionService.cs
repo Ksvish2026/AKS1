@@ -32,6 +32,8 @@ public class ProductionService(AppDbContext db)
     {
         var job = await db.RetreadJobs.SingleAsync(x => x.Id == jobId);
         if (job.Status != JobStatus.InProduction) throw new InvalidOperationException("Only jobs in production can start station work.");
+        if (!Workflow.Stages.Contains(station, StringComparer.Ordinal) || station is "Receiving" or "QC Release" or "Dispatch") throw new InvalidOperationException("This is not a production station.");
+        if (!string.Equals(job.CurrentStage, station, StringComparison.Ordinal)) throw new InvalidOperationException($"The next required station is {job.CurrentStage}; {station} cannot be started yet.");
         if (await db.StationTransactions.AnyAsync(x => x.RetreadJobId == jobId && x.EndedAt == null)) throw new InvalidOperationException("Complete the active station transaction first.");
         var op = await db.Operators.SingleAsync(x => x.Id == operatorId && x.Active);
         var tx = new StationTransaction { RetreadJobId = jobId, Station = station, OperatorId = operatorId, MachineId = machineId, StartedAt = DateTime.Now, LabourRateSnapshot = op.LabourRate };

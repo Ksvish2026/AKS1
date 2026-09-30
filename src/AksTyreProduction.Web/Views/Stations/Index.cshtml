@@ -14,6 +14,10 @@
 }
 else if(Model.Station=="Dispatch")
 {@if(Model.Job.Status!=JobStatus.ReadyForDispatch){<div class="alert alert-danger">Dispatch is locked. Complete Final Inspection, pass QC, and mark the tyre Ready for Dispatch first.</div>}else{<form asp-action="Dispatch" method="post"><input type="hidden" name="jobId" value="@Model.Job.Id"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/><label class="form-label">Dispatch Reference</label><input name="reference" class="form-control mb-2" required placeholder="DSP-26001"/><label class="form-label">Method</label><select name="method" class="form-select mb-2"><option>Delivery</option><option>Collection</option></select><textarea name="notes" class="form-control mb-3" placeholder="Notes"></textarea><button class="btn btn-primary btn-lg w-100">CONFIRM DISPATCH</button></form>}}
+else if(Model.Active!=null&&Model.Active.Station!=Model.Station)
+{<div class="alert alert-warning">An active transaction is open at <strong>@Model.Active.Station</strong>. Load that station to complete it.</div>}
+else if(Model.Active==null&&Model.Job.CurrentStage!=Model.Station)
+{<div class="alert alert-warning">This job must complete <strong>@Model.Job.CurrentStage</strong> next. Load that station to continue.</div>}
 else if(Model.Active==null)
 {<form asp-action="Start" method="post"><input type="hidden" name="jobId" value="@Model.Job.Id"/><input type="hidden" name="station" value="@Model.Station"/><input type="hidden" name="tyreCode" value="@Model.TyreCode"/><label class="form-label">Operator</label><select name="operatorId" class="form-select mb-3">@foreach(var op in Model.Operators){<option value="@op.Id">@op.Name · @op.Role · R@op.LabourRate/hr</option>}</select><label class="form-label">Machine (optional)</label><select name="machineId" class="form-select mb-4"><option value="">No machine</option>@foreach(var m in Model.Machines){<option value="@m.Id">@m.Name · @m.Status</option>}</select><button class="btn btn-warning btn-lg w-100">▶ START JOB</button></form>}
 else
